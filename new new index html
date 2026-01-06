@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>塔罗占卜工坊</title>
+    <style>
+        :root {
+            --primary-color: #e0c097;
+            --bg-gradient: radial-gradient(circle at center, #1a002a 0%, #050008 100%);
+            --card-back: repeating-linear-gradient(45deg, #4a2c5a, #4a2c5a 5px, #2a0c3a 5px, #2a0c3a 10px);
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--primary-color);
+            font-family: 'STKaiti', 'Georgia', serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+        }
+
+        h1 { text-shadow: 0 0 10px rgba(224, 192, 151, 0.5); margin: 15px 0 5px 0; }
+
+        /* 顶部主菜单 */
+        .main-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .nav-btn {
+            background: rgba(90, 56, 117, 0.3);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-btn.active {
+            background: var(--primary-color);
+            color: #1a002a;
+        }
+
+        /* 抽取控制区 */
+        .controls { text-align: center; margin-bottom: 20px; }
+        .action-btn {
+            background: linear-gradient(45deg, #5a3875, #8a58a8);
+            border: none;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        /* 牌背展示区 */
+        #manual-deck {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+
+        .card-back {
+            width: 30px;
+            height: 50px;
+            background: var(--card-back);
+            border: 1px solid #5a3875;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .card-back.selected { visibility: hidden; }
+
+        /* 结果展示区 */
+        .result-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .card-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.6s ease forwards;
+            opacity: 0;
+        }
+
+        .label { font-size: 14px; margin-bottom: 5px; color: #b893cc; }
+
+        /* 图片大小控制 */
+        .img-wrap {
+            width: 120px; /* 较小的图片尺寸 */
+            height: 208px;
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+            position: relative;
+        }
+
+        .img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .reversed img { transform: rotate(180deg); }
+
+        .card-name { margin-top: 8px; font-size: 14px; font-weight: bold; }
+        .ans-tag { 
+            margin-top: 5px; 
+            padding: 2px 10px; 
+            border-radius: 10px; 
+            font-size: 18px;
+            font-weight: 900;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        #status-bar { margin-bottom: 10px; color: #b893cc; height: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>🔮 塔罗在线占卜</h1>
+    
+    <div class="main-nav">
+        <button class="nav-btn active" onclick="switchTab('triangle')">圣三角(过去现在未来)</button>
+        <button class="nav-btn" onclick="switchTab('free')">无牌阵(三张并列)</button>
+        <button class="nav-btn" onclick="switchTab('yesno')">Yes / No (单张)</button>
+    </div>
+
+    <div class="controls">
+        <div id="status-bar">准备就绪</div>
+        <div style="margin-bottom: 10px;">
+            <button onclick="toggleDrawMode('random')" id="btn-rnd" class="nav-btn active">随机抽取</button>
+            <button onclick="toggleDrawMode('manual')" id="btn-man" class="nav-btn">亲自选牌</button>
+        </div>
+        <button id="draw-trigger" class="action-btn" onclick="executeDraw()">开始占卜</button>
+    </div>
+
+    <div id="manual-deck" style="display: none;"></div>
+
+    <div class="result-container" id="results"></div>
+
+<script>
+    // 基础数据与之前的维基百科链接保持一致
+    const baseUrl = "https://upload.wikimedia.org/wikipedia/commons/";
+    const tarotData = [
+        {name: "0-愚者", path: "9/90/RWS_Tarot_00_Fool.jpg", yn: "Yes"},
+        {name: "I-魔术师", path: "d/de/RWS_Tarot_01_Magician.jpg", yn: "Yes"},
+        {name: "II-女教皇", path: "8/88/RWS_Tarot_02_High_Priestess.jpg", yn: "Maybe"},
+        {name: "III-皇后", path: "d/d2/RWS_Tarot_03_Empress.jpg", yn: "Yes"},
+        {name: "IV-皇帝", path: "c/c3/RWS_Tarot_04_Emperor.jpg", yn: "Yes"},
+        {name: "V-教皇", path: "8/8d/RWS_Tarot_05_Hierophant.jpg", yn: "Yes"},
+        {name: "VI-恋人", path: "3/3a/TheLovers.jpg", yn: "Yes"},
+        {name: "VII-战车", path: "9/9b/RWS_Tarot_07_Chariot.jpg", yn: "Yes"},
+        {name: "VIII-力量", path: "f/f5/RWS_Tarot_08_Strength.jpg", yn: "Yes"},
+        {name: "IX-隐士", path: "4/4d/RWS_Tarot_09_Hermit.jpg", yn: "Maybe"},
+        {name: "X-命运之轮", path: "3/3c/RWS_Tarot_10_Wheel_of_Fortune.jpg", yn: "Yes"},
+        {name: "XI-正义", path: "e/e0/RWS_Tarot_11_Justice.jpg", yn: "Maybe"},
+        {name: "XII-倒吊人", path: "2/2b/RWS_Tarot_12_Hanged_Man.jpg", yn: "No"},
+        {name: "XIII-死神", path: "d/d7/RWS_Tarot_13_Death.jpg", yn: "No"},
+        {name: "XIV-节制", path: "f/f8/RWS_Tarot_14_Temperance.jpg", yn: "Yes"},
+        {name: "XV-恶魔", path: "5/55/RWS_Tarot_15_Devil.jpg", yn: "No"},
+        {name: "XVI-高塔", path: "5/53/RWS_Tarot_16_Tower.jpg", yn: "No"},
+        {name: "XVII-星星", path: "d/db/RWS_Tarot_17_Star.jpg", yn: "Yes"},
+        {name: "XVIII-月亮", path: "7/7f/RWS_Tarot_18_Moon.jpg", yn: "No"},
+        {name: "XIX-太阳", path: "1/17/RWS_Tarot_19_Sun.jpg", yn: "Yes"},
+        {name: "XX-审判", path: "d/dd/RWS_Tarot_20_Judgement.jpg", yn: "Yes"},
+        {name: "XXI-世界", path: "f/ff/RWS_Tarot_21_World.jpg", yn: "Yes"},
+        // 小阿卡纳部分映射 (为节省篇幅，沿用逻辑，补充了部分YesNo属性)
+        {name: "权杖一", path: "1/11/Wands01.jpg", yn: "Yes"}, {name: "权杖二", path: "0/0f/Wands02.jpg", yn: "Maybe"},
+        {name: "权杖三", path: "f/ff/Wands03.jpg", yn: "Yes"}, {name: "权杖四", path: "a/a4/Wands04.jpg", yn: "Yes"},
+        {name: "权杖五", path: "9/9d/Wands05.jpg", yn: "No"}, {name: "权杖六", path: "3/3b/Wands06.jpg", yn: "Yes"},
+        {name: "权杖七", path: "e/e4/Wands07.jpg", yn: "Yes"}, {name: "权杖八", path: "6/6b/Wands08.jpg", yn: "Yes"},
+        {name: "权杖九", path: "4/4d/Tarot_Nine_of_Wands.jpg", yn: "Maybe"}, {name: "权杖十", path: "0/0b/Wands10.jpg", yn: "No"},
+        {name: "权杖侍从", path: "6/6a/WandsPage.jpg", yn: "Yes"}, {name: "权杖骑士", path: "1/16/WandsKnight.jpg", yn: "Yes"},
+        {name: "权杖王后", path: "0/0d/WandsQueen.jpg", yn: "Yes"}, {name: "权杖国王", path: "c/ce/WandsKing.jpg", yn: "Yes"},
+        {name: "圣杯一", path: "3/36/Cups01.jpg", yn: "Yes"}, {name: "圣杯二", path: "f/f8/Cups02.jpg", yn: "Yes"},
+        {name: "圣杯三", path: "7/7a/Cups03.jpg", yn: "Yes"}, {name: "圣杯四", path: "3/35/Cups04.jpg", yn: "No"},
+        {name: "圣杯五", path: "d/d7/Cups05.jpg", yn: "No"}, {name: "圣杯六", path: "1/17/Cups06.jpg", yn: "Yes"},
+        {name: "圣杯七", path: "a/ae/Cups07.jpg", yn: "Maybe"}, {name: "圣杯八", path: "6/60/Cups08.jpg", yn: "No"},
+        {name: "圣杯九", path: "2/24/Cups09.jpg", yn: "Yes"}, {name: "圣杯十", path: "8/84/Cups10.jpg", yn: "Yes"},
+        {name: "圣杯侍从", path: "a/a6/CupsPage.jpg", yn: "Yes"}, {name: "圣杯骑士", path: "f/fa/CupsKnight.jpg", yn: "Yes"},
+        {name: "圣杯王后", path: "6/61/CupsQueen.jpg", yn: "Yes"}, {name: "圣杯国王", path: "f/f0/CupsKing.jpg", yn: "Yes"},
+        {name: "宝剑一", path: "1/1a/Swords01.jpg", yn: "Yes"}, {name: "宝剑二", path: "9/92/Swords02.jpg", yn: "Maybe"},
+        {name: "宝剑三", path: "2/2c/Swords03.jpg", yn: "No"}, {name: "宝剑四", path: "b/bf/Swords04.jpg", yn: "Maybe"},
+        {name: "宝剑五", path: "2/23/Swords05.jpg", yn: "No"}, {name: "宝剑六", path: "2/29/Swords06.jpg", yn: "Yes"},
+        {name: "宝剑七", path: "3/34/Swords07.jpg", yn: "No"}, {name: "宝剑八", path: "a/a7/Swords08.jpg", yn: "No"},
+        {name: "宝剑九", path: "2/2f/Swords09.jpg", yn: "No"}, {name: "宝剑十", path: "d/d4/Swords10.jpg", yn: "No"},
+        {name: "宝剑侍从", path: "4/4c/SwordsPage.jpg", yn: "Maybe"}, {name: "宝剑骑士", path: "b/b0/SwordsKnight.jpg", yn: "No"},
+        {name: "宝剑王后", path: "d/d4/SwordsQueen.jpg", yn: "No"}, {name: "宝剑国王", path: "3/33/SwordsKing.jpg", yn: "No"},
+        {name: "星币一", path: "f/fd/Pents01.jpg", yn: "Yes"}, {name: "星币二", path: "9/9f/Pents02.jpg", yn: "Maybe"},
+        {name: "星币三", path: "4/42/Pents03.jpg", yn: "Yes"}, {name: "星币四", path: "3/35/Pents04.jpg", yn: "Maybe"},
+        {name: "星币五", path: "9/96/Pents05.jpg", yn: "No"}, {name: "星币六", path: "a/a6/Pents06.jpg", yn: "Yes"},
+        {name: "星币七", path: "6/6a/Pents07.jpg", yn: "Maybe"}, {name: "星币八", path: "4/49/Pents08.jpg", yn: "Yes"},
+        {name: "星币九", path: "f/f0/Pents09.jpg", yn: "Yes"}, {name: "星币十", path: "4/42/Pents10.jpg", yn: "Yes"},
+        {name: "星币侍从", path: "e/e0/PentsPage.jpg", yn: "Yes"}, {name: "星币骑士", path: "c/c6/PentsKnight.jpg", yn: "Yes"},
+        {name: "星币王后", path: "8/88/PentsQueen.jpg", yn: "Yes"}, {name: "星币国王", path: "1/14/PentsKing.jpg", yn: "Yes"}
+    ];
+
+    let currentTab = 'triangle'; 
+    let drawMode = 'random';
+    let manualChoices = [];
+    let shuffledIndices = [];
+
+    // 初始化
+    function init() {
+        createManualDeck();
+        switchTab('triangle');
+    }
+
+    function switchTab(tab) {
+        currentTab = tab;
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        event?.target?.classList?.add('active'); // 仅在点击时有效
+        
+        document.getElementById('results').innerHTML = '';
+        document.getElementById('status-bar').innerText = "已切换模式，请开始";
+        
+        if(drawMode === 'manual') resetManual();
+    }
+
+    function toggleDrawMode(mode) {
+        drawMode = mode;
+        document.getElementById('btn-rnd').classList.toggle('active', mode === 'random');
+        document.getElementById('btn-man').classList.toggle('active', mode === 'manual');
+        
+        document.getElementById('draw-trigger').style.display = (mode === 'random') ? 'inline-block' : 'none';
+        document.getElementById('manual-deck').style.display = (mode === 'manual') ? 'flex' : 'none';
+        
+        if(mode === 'manual') resetManual();
+    }
+
+    function createManualDeck() {
+        const deck = document.getElementById('manual-deck');
+        for(let i=0; i<78; i++) {
+            const d = document.createElement('div');
+            d.className = 'card-back';
+            d.onclick = () => pickCard(i, d);
+            deck.appendChild(d);
+        }
+    }
+
+    function resetManual() {
+        manualChoices = [];
+        shuffledIndices = Array.from({length: 78}, (_, i) => i).sort(() => Math.random() - 0.5);
+        document.querySelectorAll('.card-back').forEach(c => c.classList.remove('selected'));
+        document.getElementById('status-bar').innerText = "请从下方选择卡牌...";
+    }
+
+    function pickCard(uiIdx, element) {
+        if (element.classList.contains('selected')) return;
+        
+        const limit = (currentTab === 'yesno') ? 1 : 3;
+        if (manualChoices.length >= limit) return;
+
+        element.classList.add('selected');
+        manualChoices.push(shuffledIndices[uiIdx]);
+
+        document.getElementById('status-bar').innerText = `已选 ${manualChoices.length} / ${limit}`;
+        if(manualChoices.length === limit) renderResults(manualChoices);
+    }
+
+    function executeDraw() {
+        const limit = (currentTab === 'yesno') ? 1 : 3;
+        const result = Array.from({length: 78}, (_, i) => i).sort(() => Math.random() - 0.5).slice(0, limit);
+        renderResults(result);
+    }
+
+    function renderResults(indices) {
+        const container = document.getElementById('results');
+        container.innerHTML = '';
+        
+        indices.forEach((idx, i) => {
+            const data = tarotData[idx];
+            const isRev = Math.random() > 0.5;
+            
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'card-item';
+            cardDiv.style.animationDelay = `${i * 0.2}s`;
+
+            // 标签处理
+            let labelText = '';
+            if(currentTab === 'triangle') {
+                labelText = ['过去', '现在', '未来'][i];
+            } else if(currentTab === 'free') {
+                labelText = `卡牌 ${i+1}`;
+            }
+
+            // Yes No 逻辑
+            let ynHtml = '';
+            if(currentTab === 'yesno') {
+                let finalAns = data.yn;
+                if(isRev) { // 逆位反转逻辑
+                    if(finalAns === "Yes") finalAns = "No";
+                    else if(finalAns === "No") finalAns = "Yes";
+                }
+                const color = finalAns === "Yes" ? "#4caf50" : (finalAns === "No" ? "#f44336" : "#ff9800");
+                ynHtml = `<div class="ans-tag" style="color:${color}">${finalAns}!</div>`;
+            }
+
+            cardDiv.innerHTML = `
+                ${labelText ? `<div class="label">${labelText}</div>` : ''}
+                <div class="img-wrap ${isRev ? 'reversed' : ''}">
+                    <img src="${baseUrl + data.path}" alt="${data.name}">
+                </div>
+                <div class="card-name">${data.name} ${isRev ? '(逆)' : ''}</div>
+                ${ynHtml}
+            `;
+            container.appendChild(cardDiv);
+        });
+        document.getElementById('status-bar').innerText = "解牌完成";
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
