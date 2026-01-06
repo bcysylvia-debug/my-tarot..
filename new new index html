@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>塔罗占卜工坊</title>
+    <title>塔罗占卜工坊 - 极速版</title>
     <style>
         :root {
             --primary-color: #e0c097;
@@ -25,10 +25,9 @@
 
         h1 { text-shadow: 0 0 10px rgba(224, 192, 151, 0.5); margin: 15px 0 5px 0; }
 
-        /* 顶部主菜单 */
         .main-nav {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 20px;
             flex-wrap: wrap;
             justify-content: center;
@@ -38,10 +37,11 @@
             background: rgba(90, 56, 117, 0.3);
             border: 1px solid var(--primary-color);
             color: var(--primary-color);
-            padding: 8px 15px;
+            padding: 8px 12px;
             border-radius: 5px;
             cursor: pointer;
             transition: all 0.3s;
+            font-size: 14px;
         }
 
         .nav-btn.active {
@@ -49,20 +49,18 @@
             color: #1a002a;
         }
 
-        /* 抽取控制区 */
         .controls { text-align: center; margin-bottom: 20px; }
         .action-btn {
             background: linear-gradient(45deg, #5a3875, #8a58a8);
             border: none;
             color: white;
-            padding: 10px 30px;
-            border-radius: 20px;
+            padding: 12px 40px;
+            border-radius: 25px;
             cursor: pointer;
             font-size: 16px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        /* 牌背展示区 */
         #manual-deck {
             display: flex;
             flex-wrap: wrap;
@@ -73,8 +71,8 @@
         }
 
         .card-back {
-            width: 30px;
-            height: 50px;
+            width: 32px;
+            height: 55px;
             background: var(--card-back);
             border: 1px solid #5a3875;
             border-radius: 3px;
@@ -82,7 +80,6 @@
         }
         .card-back.selected { visibility: hidden; }
 
-        /* 结果展示区 */
         .result-container {
             display: flex;
             justify-content: center;
@@ -100,20 +97,19 @@
             opacity: 0;
         }
 
-        .label { font-size: 14px; margin-bottom: 5px; color: #b893cc; }
+        .label { font-size: 14px; margin-bottom: 5px; color: #b893cc; font-weight: bold;}
 
-        /* 图片大小控制 */
         .img-wrap {
-            width: 120px; /* 较小的图片尺寸 */
-            height: 208px;
+            width: 110px; 
+            height: 190px;
             border: 2px solid var(--primary-color);
             border-radius: 8px;
             overflow: hidden;
-            background: #000;
+            background: #220033;
             position: relative;
         }
 
-        .img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.3s;}
         .reversed img { transform: rotate(180deg); }
 
         .card-name { margin-top: 8px; font-size: 14px; font-weight: bold; }
@@ -121,13 +117,13 @@
             margin-top: 5px; 
             padding: 2px 10px; 
             border-radius: 10px; 
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 900;
+            text-shadow: 1px 1px 2px #000;
         }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        #status-bar { margin-bottom: 10px; color: #b893cc; height: 20px; }
+        #status-bar { margin-bottom: 10px; color: #b893cc; height: 20px; font-size: 14px;}
     </style>
 </head>
 <body>
@@ -135,27 +131,28 @@
     <h1>🔮 塔罗在线占卜</h1>
     
     <div class="main-nav">
-        <button class="nav-btn active" onclick="switchTab('triangle')">圣三角(过去现在未来)</button>
-        <button class="nav-btn" onclick="switchTab('free')">无牌阵(三张并列)</button>
-        <button class="nav-btn" onclick="switchTab('yesno')">Yes / No (单张)</button>
+        <button class="nav-btn active" id="tab-triangle" onclick="switchTab('triangle')">圣三角</button>
+        <button class="nav-btn" id="tab-free" onclick="switchTab('free')">无牌阵三张</button>
+        <button class="nav-btn" id="tab-yesno" onclick="switchTab('yesno')">Yes / No</button>
     </div>
 
     <div class="controls">
         <div id="status-bar">准备就绪</div>
-        <div style="margin-bottom: 10px;">
+        <div style="margin-bottom: 15px;">
             <button onclick="toggleDrawMode('random')" id="btn-rnd" class="nav-btn active">随机抽取</button>
             <button onclick="toggleDrawMode('manual')" id="btn-man" class="nav-btn">亲自选牌</button>
         </div>
-        <button id="draw-trigger" class="action-btn" onclick="executeDraw()">开始占卜</button>
+        <button id="draw-trigger" class="action-btn" onclick="executeDraw()">开始洗牌并抽取</button>
     </div>
 
     <div id="manual-deck" style="display: none;"></div>
-
     <div class="result-container" id="results"></div>
 
 <script>
-    // 基础数据与之前的维基百科链接保持一致
-    const baseUrl = "https://upload.wikimedia.org/wikipedia/commons/";
+    // 采用图片加速代理：wsrv.nl
+    // 它能自动抓取维基百科图片并将其缩放、压缩为 WebP 格式
+    const getFastImgUrl = (path) => `https://wsrv.nl/?url=https://upload.wikimedia.org/wikipedia/commons/${path}&w=220&output=webp&q=75`;
+
     const tarotData = [
         {name: "0-愚者", path: "9/90/RWS_Tarot_00_Fool.jpg", yn: "Yes"},
         {name: "I-魔术师", path: "d/de/RWS_Tarot_01_Magician.jpg", yn: "Yes"},
@@ -179,7 +176,7 @@
         {name: "XIX-太阳", path: "1/17/RWS_Tarot_19_Sun.jpg", yn: "Yes"},
         {name: "XX-审判", path: "d/dd/RWS_Tarot_20_Judgement.jpg", yn: "Yes"},
         {name: "XXI-世界", path: "f/ff/RWS_Tarot_21_World.jpg", yn: "Yes"},
-        // 小阿卡纳部分映射 (为节省篇幅，沿用逻辑，补充了部分YesNo属性)
+        // 小阿卡纳
         {name: "权杖一", path: "1/11/Wands01.jpg", yn: "Yes"}, {name: "权杖二", path: "0/0f/Wands02.jpg", yn: "Maybe"},
         {name: "权杖三", path: "f/ff/Wands03.jpg", yn: "Yes"}, {name: "权杖四", path: "a/a4/Wands04.jpg", yn: "Yes"},
         {name: "权杖五", path: "9/9d/Wands05.jpg", yn: "No"}, {name: "权杖六", path: "3/3b/Wands06.jpg", yn: "Yes"},
@@ -215,7 +212,6 @@
     let manualChoices = [];
     let shuffledIndices = [];
 
-    // 初始化
     function init() {
         createManualDeck();
         switchTab('triangle');
@@ -223,11 +219,13 @@
 
     function switchTab(tab) {
         currentTab = tab;
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        event?.target?.classList?.add('active'); // 仅在点击时有效
+        document.querySelectorAll('.nav-btn').forEach(b => {
+            if (b.id.startsWith('tab-')) b.classList.remove('active');
+        });
+        document.getElementById(`tab-${tab}`).classList.add('active');
         
         document.getElementById('results').innerHTML = '';
-        document.getElementById('status-bar').innerText = "已切换模式，请开始";
+        document.getElementById('status-bar').innerText = "已就绪，请选择抽牌方式";
         
         if(drawMode === 'manual') resetManual();
     }
@@ -245,10 +243,11 @@
 
     function createManualDeck() {
         const deck = document.getElementById('manual-deck');
+        deck.innerHTML = '';
         for(let i=0; i<78; i++) {
             const d = document.createElement('div');
             d.className = 'card-back';
-            d.onclick = () => pickCard(i, d);
+            d.onclick = (e) => pickCard(i, d);
             deck.appendChild(d);
         }
     }
@@ -257,20 +256,21 @@
         manualChoices = [];
         shuffledIndices = Array.from({length: 78}, (_, i) => i).sort(() => Math.random() - 0.5);
         document.querySelectorAll('.card-back').forEach(c => c.classList.remove('selected'));
-        document.getElementById('status-bar').innerText = "请从下方选择卡牌...";
+        document.getElementById('status-bar').innerText = "请从下方 78 张牌中点击选择...";
     }
 
     function pickCard(uiIdx, element) {
         if (element.classList.contains('selected')) return;
-        
         const limit = (currentTab === 'yesno') ? 1 : 3;
         if (manualChoices.length >= limit) return;
 
         element.classList.add('selected');
         manualChoices.push(shuffledIndices[uiIdx]);
 
-        document.getElementById('status-bar').innerText = `已选 ${manualChoices.length} / ${limit}`;
-        if(manualChoices.length === limit) renderResults(manualChoices);
+        document.getElementById('status-bar').innerText = `已选择 ${manualChoices.length} / ${limit}`;
+        if(manualChoices.length === limit) {
+            setTimeout(() => renderResults(manualChoices), 300);
+        }
     }
 
     function executeDraw() {
@@ -291,19 +291,17 @@
             cardDiv.className = 'card-item';
             cardDiv.style.animationDelay = `${i * 0.2}s`;
 
-            // 标签处理
             let labelText = '';
             if(currentTab === 'triangle') {
                 labelText = ['过去', '现在', '未来'][i];
             } else if(currentTab === 'free') {
-                labelText = `卡牌 ${i+1}`;
+                labelText = `牌 ${i+1}`;
             }
 
-            // Yes No 逻辑
             let ynHtml = '';
             if(currentTab === 'yesno') {
                 let finalAns = data.yn;
-                if(isRev) { // 逆位反转逻辑
+                if(isRev) {
                     if(finalAns === "Yes") finalAns = "No";
                     else if(finalAns === "No") finalAns = "Yes";
                 }
@@ -314,14 +312,14 @@
             cardDiv.innerHTML = `
                 ${labelText ? `<div class="label">${labelText}</div>` : ''}
                 <div class="img-wrap ${isRev ? 'reversed' : ''}">
-                    <img src="${baseUrl + data.path}" alt="${data.name}">
+                    <img src="${getFastImgUrl(data.path)}" alt="${data.name}">
                 </div>
                 <div class="card-name">${data.name} ${isRev ? '(逆)' : ''}</div>
                 ${ynHtml}
             `;
             container.appendChild(cardDiv);
         });
-        document.getElementById('status-bar').innerText = "解牌完成";
+        document.getElementById('status-bar').innerText = "命运已揭晓";
     }
 
     window.onload = init;
