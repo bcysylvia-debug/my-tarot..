@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>命运塔罗 - 圣三角占卜</title>
+    <style>
+        /* === 样式设计 === */
+        :root {
+            --primary-color: #e0c097;
+            --bg-gradient: radial-gradient(circle at center, #2c003e 0%, #0f0016 100%);
+            --card-back-pattern: repeating-linear-gradient(45deg, #4a2c5a, #4a2c5a 10px, #3a1c4a 10px, #3a1c4a 20px);
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--primary-color);
+            font-family: 'Georgia', serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 { text-shadow: 2px 2px 4px #000; margin-bottom: 5px; }
+        .subtitle { color: #b893cc; font-size: 0.9em; margin-bottom: 20px; }
+
+        /* 模式切换按钮 */
+        .mode-switch {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            background: transparent;
+            border: 2px solid #5a3875;
+            color: #b893cc;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mode-btn.active {
+            background: #5a3875;
+            color: #fff;
+            box-shadow: 0 0 10px #5a3875;
+        }
+
+        /* 抽取按钮 (随机模式用) */
+        .action-btn {
+            background: linear-gradient(45deg, #5a3875, #8a58a8);
+            border: none;
+            color: #fff;
+            padding: 12px 40px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            transition: transform 0.2s;
+        }
+        .action-btn:hover { transform: scale(1.05); }
+
+        /* === 结果展示区 (三张牌) === */
+        .result-area {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+            min-height: 380px; /* 预留高度 */
+        }
+
+        .card-slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 150px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+        
+        .card-slot.show { opacity: 1; transform: translateY(0); }
+
+        .slot-label {
+            font-size: 14px;
+            color: #8a58a8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        .card-img-box {
+            width: 150px;
+            height: 260px;
+            border-radius: 10px;
+            border: 2px solid #e0c097;
+            overflow: hidden;
+            background: #000;
+            position: relative;
+            box-shadow: 0 0 15px rgba(224, 192, 151, 0.2);
+        }
+
+        .card-img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 图片加载失败时的替代文字 */
+        .img-fallback {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
+            background: #220033;
+            color: #fff;
+            font-size: 18px;
+            display: none; /* 默认隐藏 */
+        }
+
+        .reversed img { transform: rotate(180deg); }
+        .reversed .img-fallback { transform: rotate(180deg); }
+
+        .card-name { margin-top: 10px; font-weight: bold; font-size: 16px; text-align: center;}
+        .card-direction { font-size: 12px; color: #aaa; }
+
+        /* === 自选模式：牌背网格 === */
+        #manual-deck-area {
+            display: none; /* 默认隐藏 */
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+            max-width: 800px;
+            margin-top: 20px;
+        }
+
+        .card-back {
+            width: 40px;
+            height: 70px;
+            background: var(--card-back-pattern);
+            border: 1px solid #5a3875;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .card-back:hover { transform: translateY(-5px); border-color: #e0c097; }
+        .card-back.selected { visibility: hidden; pointer-events: none; } /* 选中后消失 */
+
+        /* 提示信息 */
+        #status-msg { height: 20px; color: #e0c097; margin-bottom: 10px; }
+
+    </style>
+</head>
+<body>
+
+    <h1>✨ 命运圣三角 ✨</h1>
+    <div class="subtitle">专注你的问题，揭示过去、现在与未来</div>
+
+    <div class="mode-switch">
+        <button class="mode-btn active" onclick="setMode('random')">🔮 随机抽取</button>
+        <button class="mode-btn" onclick="setMode('manual')">✋ 亲自抽牌</button>
+    </div>
+
+    <div id="status-msg">点击下方按钮开始...</div>
+
+    <button id="random-btn" class="action-btn" onclick="drawThreeRandom()">开始洗牌并抽取</button>
+
+    <div id="manual-deck-area"></div>
+
+    <div class="result-area" id="result-area">
+        <div class="card-slot" id="slot-0">
+            <div class="slot-label">Past / 过去</div>
+            <div class="card-img-box">
+                <div class="img-fallback"></div>
+                <img src="" alt="Card" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex'; this.previousElementSibling.innerText = this.getAttribute('data-name')">
+            </div>
+            <div class="card-name"></div>
+            <div class="card-direction"></div>
+        </div>
+
+        <div class="card-slot" id="slot-1">
+            <div class="slot-label">Present / 现在</div>
+            <div class="card-img-box">
+                <div class="img-fallback"></div>
+                <img src="" alt="Card" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex'; this.previousElementSibling.innerText = this.getAttribute('data-name')">
+            </div>
+            <div class="card-name"></div>
+            <div class="card-direction"></div>
+        </div>
+
+        <div class="card-slot" id="slot-2">
+            <div class="slot-label">Future / 未来</div>
+            <div class="card-img-box">
+                <div class="img-fallback"></div>
+                <img src="" alt="Card" onerror="this.style.display='none'; this.previousElementSibling.style.display='flex'; this.previousElementSibling.innerText = this.getAttribute('data-name')">
+            </div>
+            <div class="card-name"></div>
+            <div class="card-direction"></div>
+        </div>
+    </div>
+
+<script>
+    // === 数据准备：使用 Wikimedia Commons 的稳定链接 ===
+    // 基础路径
+    const baseUrl = "https://upload.wikimedia.org/wikipedia/commons/";
+    
+    // 78张牌的数据映射 (简化版，自动映射文件名)
+    const tarotData = [
+        {name: "愚者", en: "The Fool", path: "9/90/RWS_Tarot_00_Fool.jpg"},
+        {name: "魔术师", en: "The Magician", path: "d/de/RWS_Tarot_01_Magician.jpg"},
+        {name: "女教皇", en: "High Priestess", path: "8/88/RWS_Tarot_02_High_Priestess.jpg"},
+        {name: "皇后", en: "The Empress", path: "d/d2/RWS_Tarot_03_Empress.jpg"},
+        {name: "皇帝", en: "The Emperor", path: "c/c3/RWS_Tarot_04_Emperor.jpg"},
+        {name: "教皇", en: "The Hierophant", path: "8/8d/RWS_Tarot_05_Hierophant.jpg"},
+        {name: "恋人", en: "The Lovers", path: "3/3a/TheLovers.jpg"}, // 特殊命名
+        {name: "战车", en: "The Chariot", path: "9/9b/RWS_Tarot_07_Chariot.jpg"},
+        {name: "力量", en: "Strength", path: "f/f5/RWS_Tarot_08_Strength.jpg"},
+        {name: "隐士", en: "The Hermit", path: "4/4d/RWS_Tarot_09_Hermit.jpg"},
+        {name: "命运之轮", en: "Wheel of Fortune", path: "3/3c/RWS_Tarot_10_Wheel_of_Fortune.jpg"},
+        {name: "正义", en: "Justice", path: "e/e0/RWS_Tarot_11_Justice.jpg"},
+        {name: "倒吊人", en: "The Hanged Man", path: "2/2b/RWS_Tarot_12_Hanged_Man.jpg"},
+        {name: "死神", en: "Death", path: "d/d7/RWS_Tarot_13_Death.jpg"},
+        {name: "节制", en: "Temperance", path: "f/f8/RWS_Tarot_14_Temperance.jpg"},
+        {name: "恶魔", en: "The Devil", path: "5/55/RWS_Tarot_15_Devil.jpg"},
+        {name: "高塔", en: "The Tower", path: "5/53/RWS_Tarot_16_Tower.jpg"},
+        {name: "星星", en: "The Star", path: "d/db/RWS_Tarot_17_Star.jpg"},
+        {name: "月亮", en: "The Moon", path: "7/7f/RWS_Tarot_18_Moon.jpg"},
+        {name: "太阳", en: "The Sun", path: "1/17/RWS_Tarot_19_Sun.jpg"},
+        {name: "审判", en: "Judgement", path: "d/dd/RWS_Tarot_20_Judgement.jpg"},
+        {name: "世界", en: "The World", path: "f/ff/RWS_Tarot_21_World.jpg"},
+        
+        // 小阿卡纳 - 权杖 (Wands)
+        {name: "权杖一", path: "1/11/Wands01.jpg"}, {name: "权杖二", path: "0/0f/Wands02.jpg"},
+        {name: "权杖三", path: "f/ff/Wands03.jpg"}, {name: "权杖四", path: "a/a4/Wands04.jpg"},
+        {name: "权杖五", path: "9/9d/Wands05.jpg"}, {name: "权杖六", path: "3/3b/Wands06.jpg"},
+        {name: "权杖七", path: "e/e4/Wands07.jpg"}, {name: "权杖八", path: "6/6b/Wands08.jpg"},
+        {name: "权杖九", path: "4/4d/Tarot_Nine_of_Wands.jpg"}, {name: "权杖十", path: "0/0b/Wands10.jpg"},
+        {name: "权杖侍从", path: "6/6a/WandsPage.jpg"}, {name: "权杖骑士", path: "1/16/WandsKnight.jpg"},
+        {name: "权杖王后", path: "0/0d/WandsQueen.jpg"}, {name: "权杖国王", path: "c/ce/WandsKing.jpg"},
+
+        // 小阿卡纳 - 圣杯 (Cups)
+        {name: "圣杯一", path: "3/36/Cups01.jpg"}, {name: "圣杯二", path: "f/f8/Cups02.jpg"},
+        {name: "圣杯三", path: "7/7a/Cups03.jpg"}, {name: "圣杯四", path: "3/35/Cups04.jpg"},
+        {name: "圣杯五", path: "d/d7/Cups05.jpg"}, {name: "圣杯六", path: "1/17/Cups06.jpg"},
+        {name: "圣杯七", path: "a/ae/Cups07.jpg"}, {name: "圣杯八", path: "6/60/Cups08.jpg"},
+        {name: "圣杯九", path: "2/24/Cups09.jpg"}, {name: "圣杯十", path: "8/84/Cups10.jpg"},
+        {name: "圣杯侍从", path: "a/a6/CupsPage.jpg"}, {name: "圣杯骑士", path: "f/fa/CupsKnight.jpg"},
+        {name: "圣杯王后", path: "6/61/CupsQueen.jpg"}, {name: "圣杯国王", path: "f/f0/CupsKing.jpg"},
+
+        // 小阿卡纳 - 宝剑 (Swords)
+        {name: "宝剑一", path: "1/1a/Swords01.jpg"}, {name: "宝剑二", path: "9/92/Swords02.jpg"},
+        {name: "宝剑三", path: "2/2c/Swords03.jpg"}, {name: "宝剑四", path: "b/bf/Swords04.jpg"},
+        {name: "宝剑五", path: "2/23/Swords05.jpg"}, {name: "宝剑六", path: "2/29/Swords06.jpg"},
+        {name: "宝剑七", path: "3/34/Swords07.jpg"}, {name: "宝剑八", path: "a/a7/Swords08.jpg"},
+        {name: "宝剑九", path: "2/2f/Swords09.jpg"}, {name: "宝剑十", path: "d/d4/Swords10.jpg"},
+        {name: "宝剑侍从", path: "4/4c/SwordsPage.jpg"}, {name: "宝剑骑士", path: "b/b0/SwordsKnight.jpg"},
+        {name: "宝剑王后", path: "d/d4/SwordsQueen.jpg"}, {name: "宝剑国王", path: "3/33/SwordsKing.jpg"},
+
+        // 小阿卡纳 - 星币 (Pentacles)
+        {name: "星币一", path: "f/fd/Pents01.jpg"}, {name: "星币二", path: "9/9f/Pents02.jpg"},
+        {name: "星币三", path: "4/42/Pents03.jpg"}, {name: "星币四", path: "3/35/Pents04.jpg"},
+        {name: "星币五", path: "9/96/Pents05.jpg"}, {name: "星币六", path: "a/a6/Pents06.jpg"},
+        {name: "星币七", path: "6/6a/Pents07.jpg"}, {name: "星币八", path: "4/49/Pents08.jpg"},
+        {name: "星币九", path: "f/f0/Pents09.jpg"}, {name: "星币十", path: "4/42/Pents10.jpg"},
+        {name: "星币侍从", path: "e/e0/PentsPage.jpg"}, {name: "星币骑士", path: "c/c6/PentsKnight.jpg"},
+        {name: "星币王后", path: "8/88/PentsQueen.jpg"}, {name: "星币国王", path: "1/14/PentsKing.jpg"}
+    ];
+
+    let currentMode = 'random'; // 'random' 或 'manual'
+    let manualSelectedCount = 0;
+    let manualResults = [];
+
+    // === 初始化 ===
+    window.onload = function() {
+        createManualDeck();
+    };
+
+    // 切换模式
+    function setMode(mode) {
+        currentMode = mode;
+        
+        // 更新按钮样式
+        document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+
+        // 界面切换
+        const randomBtn = document.getElementById('random-btn');
+        const manualArea = document.getElementById('manual-deck-area');
+        const statusMsg = document.getElementById('status-msg');
+        
+        // 重置界面
+        resetDisplay();
+
+        if (mode === 'random') {
+            randomBtn.style.display = 'block';
+            manualArea.style.display = 'none';
+            statusMsg.innerText = "点击下方按钮开始随机抽取";
+        } else {
+            randomBtn.style.display = 'none';
+            manualArea.style.display = 'flex';
+            statusMsg.innerText = "请凭直觉点击 3 张牌...";
+            resetManualDeck();
+        }
+    }
+
+    // 重置展示区
+    function resetDisplay() {
+        for(let i=0; i<3; i++) {
+            const slot = document.getElementById(`slot-${i}`);
+            slot.classList.remove('show');
+        }
+    }
+
+    // === 逻辑核心：洗牌 ===
+    function shuffleDeck() {
+        // 创建索引数组 0-77
+        let deck = Array.from({length: 78}, (_, i) => i);
+        // Fisher-Yates 洗牌算法
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+        return deck;
+    }
+
+    // === 模式1：随机抽取三张 ===
+    function drawThreeRandom() {
+        const statusMsg = document.getElementById('status-msg');
+        statusMsg.innerText = "正在洗牌并连接宇宙...";
+        
+        resetDisplay();
+
+        setTimeout(() => {
+            const shuffledIndices = shuffleDeck();
+            const selectedIndices = [shuffledIndices[0], shuffledIndices[1], shuffledIndices[2]];
+            
+            displayResults(selectedIndices);
+            statusMsg.innerText = "抽牌完成，解读如下";
+        }, 600);
+    }
+
+    // === 模式2：自选模式 ===
+    
+    // 创建78张牌背
+    function createManualDeck() {
+        const area = document.getElementById('manual-deck-area');
+        area.innerHTML = '';
+        for (let i = 0; i < 78; i++) {
+            const card = document.createElement('div');
+            card.className = 'card-back';
+            card.onclick = () => selectManualCard(card, i); // 这里的i只是为了独立性，实际结果还是随机生成
+            area.appendChild(card);
+        }
+    }
+
+    function resetManualDeck() {
+        manualSelectedCount = 0;
+        manualResults = [];
+        const cards = document.querySelectorAll('.card-back');
+        cards.forEach(card => card.classList.remove('selected'));
+        // 每次进入自选模式，我们在后台洗一次牌，用户点击的位置对应洗牌后的顺序
+        window.currentShuffledDeck = shuffleDeck();
+    }
+
+    function selectManualCard(element, index) {
+        if (manualSelectedCount >= 3) return;
+
+        // 视觉上移除这张牌
+        element.classList.add('selected');
+        
+        // 从预先洗好的牌堆里拿一张
+        const cardIndex = window.currentShuffledDeck[manualSelectedCount];
+        manualResults.push(cardIndex);
+        manualSelectedCount++;
+
+        document.getElementById('status-msg').innerText = `已选 ${manualSelectedCount} / 3 张`;
+
+        if (manualSelectedCount === 3) {
+            document.getElementById('status-msg').innerText = "选牌完成，正在翻开...";
+            setTimeout(() => {
+                displayResults(manualResults);
+            }, 500);
+        }
+    }
+
+    // === 公共：展示结果 ===
+    function displayResults(cardIndices) {
+        cardIndices.forEach((cardIndex, i) => {
+            const cardData = tarotData[cardIndex];
+            const isReversed = Math.random() > 0.5; // 50% 概率逆位
+
+            const slot = document.getElementById(`slot-${i}`);
+            const img = slot.querySelector('img');
+            const fallback = slot.querySelector('.img-fallback');
+            const nameDiv = slot.querySelector('.card-name');
+            const dirDiv = slot.querySelector('.card-direction');
+
+            // 设置图片
+            // 重置错误处理，防止上次的错误状态残留
+            img.style.display = 'block';
+            fallback.style.display = 'none';
+            img.setAttribute('data-name', cardData.name); // 存名字以便报错时用
+            img.src = baseUrl + cardData.path;
+
+            // 设置文字
+            nameDiv.innerText = cardData.name;
+            dirDiv.innerText = isReversed ? "▼ 逆位 (Reversed)" : "▲ 正位 (Upright)";
+
+            // 处理旋转样式
+            const imgBox = slot.querySelector('.card-img-box');
+            if (isReversed) {
+                imgBox.classList.add('reversed');
+            } else {
+                imgBox.classList.remove('reversed');
+            }
+
+            // 动画显示
+            setTimeout(() => {
+                slot.classList.add('show');
+            }, i * 300); // 依次显示
+        });
+    }
+
+</script>
+</body>
+</html>
