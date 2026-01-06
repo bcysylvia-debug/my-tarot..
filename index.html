@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>神秘塔罗指引</title>
+    <style>
+        /* === CSS 样式设计 (神秘风格) === */
+        body {
+            background: radial-gradient(circle at center, #2c003e 0%, #0f0016 100%);
+            color: #e0c097; /* 仿金色字体 */
+            font-family: 'Georgia', serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #5a3875;
+            box-shadow: 0 0 20px rgba(90, 56, 117, 0.5);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        .draw-btn {
+            background: linear-gradient(45deg, #5a3875, #8a58a8);
+            border: none;
+            color: #e0c097;
+            padding: 12px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin-bottom: 25px;
+        }
+
+        .draw-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(138, 88, 168, 0.5);
+        }
+
+        /* 卡牌展示区域 */
+        #card-display-area {
+            display: none; /* 初始隐藏 */
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        .card-title {
+            font-size: 22px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .card-position {
+            font-size: 16px;
+            color: #b893cc;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+
+        .card-image-container {
+            width: 200px;
+            height: 340px; /* 固定高度防止跳动 */
+            perspective: 1000px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 3px solid #e0c097;
+            box-shadow: 0 0 15px rgba(224, 192, 151, 0.3);
+        }
+
+        #card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s;
+        }
+
+        /* 逆位样式：旋转180度 */
+        .reversed-image {
+            transform: rotate(180deg);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 加载中的提示 */
+        #loading {
+            display: none;
+            color: #b893cc;
+            margin-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>✨ 命运之轮 ✨</h1>
+    <p>深呼吸，专注于你的问题</p>
+    <button class="draw-btn" onclick="drawTarotCard()">抽取牌卡</button>
+
+    <div id="loading">正在洗牌并连接宇宙能量...</div>
+
+    <div id="card-display-area">
+        <div class="card-title" id="card-name"></div>
+        <div class="card-position" id="card-pos-text"></div>
+        <div class="card-image-container">
+            <img id="card-image" src="" alt="Tarot Card">
+        </div>
+    </div>
+</div>
+
+<script>
+    /* === JavaScript 逻辑 === */
+
+    // 图片基础URL（使用GitHub上的公开资源）
+    const imageBaseUrl = "https://raw.githubusercontent.com/mckinzie/tarot-images/master/images/";
+
+    // 78张牌的完整数据定义 (中文名 和 对应的英文文件名)
+    const tarotDeck = [
+        // 大阿卡纳 (22张)
+        { name: "0 - 愚者 (The Fool)", file: "the_fool.jpg" },
+        { name: "I - 魔术师 (The Magician)", file: "the_magician.jpg" },
+        { name: "II - 女教皇 (The High Priestess)", file: "the_high_priestess.jpg" },
+        { name: "III - 皇后 (The Empress)", file: "the_empress.jpg" },
+        { name: "IV - 皇帝 (The Emperor)", file: "the_emperor.jpg" },
+        { name: "V - 教皇 (The Hierophant)", file: "the_hierophant.jpg" },
+        { name: "VI - 恋人 (The Lovers)", file: "the_lovers.jpg" },
+        { name: "VII - 战车 (The Chariot)", file: "the_chariot.jpg" },
+        { name: "VIII - 力量 (Strength)", file: "strength.jpg" },
+        { name: "IX - 隐士 (The Hermit)", file: "the_hermit.jpg" },
+        { name: "X - 命运之轮 (Wheel of Fortune)", file: "wheel_of_fortune.jpg" },
+        { name: "XI - 正义 (Justice)", file: "justice.jpg" },
+        { name: "XII - 倒吊人 (The Hanged Man)", file: "the_hanged_man.jpg" },
+        { name: "XIII - 死神 (Death)", file: "death.jpg" },
+        { name: "XIV - 节制 (Temperance)", file: "temperance.jpg" },
+        { name: "XV - 恶魔 (The Devil)", file: "the_devil.jpg" },
+        { name: "XVI - 高塔 (The Tower)", file: "the_tower.jpg" },
+        { name: "XVII - 星星 (The Star)", file: "the_star.jpg" },
+        { name: "XVIII - 月亮 (The Moon)", file: "the_moon.jpg" },
+        { name: "XIX - 太阳 (The Sun)", file: "the_sun.jpg" },
+        { name: "XX - 审判 (Judgement)", file: "judgement.jpg" },
+        { name: "XXI - 世界 (The World)", file: "the_world.jpg" },
+        
+        // 权杖牌组 (Wands)
+        { name: "权杖一", file: "ace_of_wands.jpg" }, { name: "权杖二", file: "2_of_wands.jpg" },
+        { name: "权杖三", file: "3_of_wands.jpg" }, { name: "权杖四", file: "4_of_wands.jpg" },
+        { name: "权杖五", file: "5_of_wands.jpg" }, { name: "权杖六", file: "6_of_wands.jpg" },
+        { name: "权杖七", file: "7_of_wands.jpg" }, { name: "权杖八", file: "8_of_wands.jpg" },
+        { name: "权杖九", file: "9_of_wands.jpg" }, { name: "权杖十", file: "10_of_wands.jpg" },
+        { name: "权杖侍从", file: "page_of_wands.jpg" }, { name: "权杖骑士", file: "knight_of_wands.jpg" },
+        { name: "权杖王后", file: "queen_of_wands.jpg" }, { name: "权杖国王", file: "king_of_wands.jpg" },
+        
+        // 圣杯牌组 (Cups)
+        { name: "圣杯一", file: "ace_of_cups.jpg" }, { name: "圣杯二", file: "2_of_cups.jpg" },
+        { name: "圣杯三", file: "3_of_cups.jpg" }, { name: "圣杯四", file: "4_of_cups.jpg" },
+        { name: "圣杯五", file: "5_of_cups.jpg" }, { name: "圣杯六", file: "6_of_cups.jpg" },
+        { name: "圣杯七", file: "7_of_cups.jpg" }, { name: "圣杯八", file: "8_of_cups.jpg" },
+        { name: "圣杯九", file: "9_of_cups.jpg" }, { name: "圣杯十", file: "10_of_cups.jpg" },
+        { name: "圣杯侍从", file: "page_of_cups.jpg" }, { name: "圣杯骑士", file: "knight_of_cups.jpg" },
+        { name: "圣杯王后", file: "queen_of_cups.jpg" }, { name: "圣杯国王", file: "king_of_cups.jpg" },
+        
+        // 宝剑牌组 (Swords)
+        { name: "宝剑一", file: "ace_of_swords.jpg" }, { name: "宝剑二", file: "2_of_swords.jpg" },
+        { name: "宝剑三", file: "3_of_swords.jpg" }, { name: "宝剑四", file: "4_of_swords.jpg" },
+        { name: "宝剑五", file: "5_of_swords.jpg" }, { name: "宝剑六", file: "6_of_swords.jpg" },
+        { name: "宝剑七", file: "7_of_swords.jpg" }, { name: "宝剑八", file: "8_of_swords.jpg" },
+        { name: "宝剑九", file: "9_of_swords.jpg" }, { name: "宝剑十", file: "10_of_swords.jpg" },
+        { name: "宝剑侍从", file: "page_of_swords.jpg" }, { name: "宝剑骑士", file: "knight_of_swords.jpg" },
+        { name: "宝剑王后", file: "queen_of_swords.jpg" }, { name: "宝剑国王", file: "king_of_swords.jpg" },
+        
+        // 星币牌组 (Pentacles)
+        { name: "星币一", file: "ace_of_pentacles.jpg" }, { name: "星币二", file: "2_of_pentacles.jpg" },
+        { name: "星币三", file: "3_of_pentacles.jpg" }, { name: "星币四", file: "4_of_pentacles.jpg" },
+        { name: "星币五", file: "5_of_pentacles.jpg" }, { name: "星币六", file: "6_of_pentacles.jpg" },
+        { name: "星币七", file: "7_of_pentacles.jpg" }, { name: "星币八", file: "8_of_pentacles.jpg" },
+        { name: "星币九", file: "9_of_pentacles.jpg" }, { name: "星币十", file: "10_of_pentacles.jpg" },
+        { name: "星币侍从", file: "page_of_pentacles.jpg" }, { name: "星币骑士", file: "knight_of_pentacles.jpg" },
+        { name: "星币王后", file: "queen_of_pentacles.jpg" }, { name: "星币国王", file: "king_of_pentacles.jpg" }
+    ];
+
+    // 预加载函数 (可选，为了更好的体验，但会增加初始加载时间，这里暂不启用)
+
+    function drawTarotCard() {
+        const displayArea = document.getElementById('card-display-area');
+        const loadingMsg = document.getElementById('loading');
+        const cardImage = document.getElementById('card-image');
+        const cardNameText = document.getElementById('card-name');
+        const cardPosText = document.getElementById('card-pos-text');
+        
+        // 简单的加载效果
+        displayArea.style.display = 'none';
+        loadingMsg.style.display = 'block';
+
+        // 模拟一点延迟感
+        setTimeout(() => {
+            // 1. 随机选择一张牌
+            const randomIndex = Math.floor(Math.random() * tarotDeck.length);
+            const selectedCard = tarotDeck[randomIndex];
+
+            // 2. 随机决定正逆位 (50% 概率)
+            const isReversed = Math.random() > 0.5;
+
+            // 3. 更新界面内容
+            cardNameText.textContent = selectedCard.name;
+            cardPosText.textContent = isReversed ? "【逆位】 Reversed" : "【正位】 Upright";
+            
+            // 设置图片来源 (拼接基础URL和文件名)
+            cardImage.src = imageBaseUrl + selectedCard.file;
+
+            // 4. 处理逆位图片旋转
+            if (isReversed) {
+                cardImage.classList.add('reversed-image');
+            } else {
+                cardImage.classList.remove('reversed-image');
+            }
+
+            // 5. 显示结果
+            loadingMsg.style.display = 'none';
+            displayArea.style.display = 'flex';
+        }, 600); // 600ms 延迟
+    }
+
+</script>
+</body>
+</html>
