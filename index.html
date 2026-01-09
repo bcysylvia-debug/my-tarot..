@@ -144,9 +144,8 @@
     const getFastImgUrl = (path) => `https://wsrv.nl/?url=https://upload.wikimedia.org/wikipedia/commons/${path}&w=160&output=webp&q=75`;
 
     // 2. 本地/自定义图源路径 (用于宫廷牌)
-    // 假设你在仓库根目录建了 "court" 文件夹
-    const getCourtCardUrl = (filename) => `./court/${filename}`;
-
+    // 【核心修复】：图片就在根目录，所以直接使用 ./${filename}
+    const getCourtCardUrl = (filename) => `./${filename}`;
     // === 数据定义 ===
     const tarotData = [
         // --- 大阿卡纳 (保持网络源) ---
