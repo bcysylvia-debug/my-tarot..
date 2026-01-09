@@ -209,18 +209,14 @@
     ];
 
     // === 获取图片地址的逻辑 ===
-    function getCardSrc(cardData) { 
-    // 只要有 local 属性，就去根目录找，否则才去维基百科找
-    return card.local ? getCourtCardUrl(card.local) : getFastImgUrl(card.path); 
-}
-        if (cardData.local) {
-            // 如果是宫廷牌，使用本地路径
-            return getCourtCardUrl(cardData.local);
-        } else {
-            // 否则使用网络加速路径
-            return getFastImgUrl(cardData.path);
-        }
+function getCardSrc(cardData) { 
+    // 检查 cardData.local 是否存在，并返回对应路径
+    if (cardData.local) {
+        return getCourtCardUrl(cardData.local);
+    } else {
+        return getFastImgUrl(cardData.path);
     }
+}
 
     const ynRules = {
         22: 'WAIT', 36: 'WAIT', 50: 'WAIT', 64: 'WAIT',
