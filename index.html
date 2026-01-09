@@ -155,7 +155,7 @@
         {id: 3, name: "皇后", path: "d/d2/RWS_Tarot_03_Empress.jpg"},
         {id: 4, name: "皇帝", path: "c/c3/RWS_Tarot_04_Emperor.jpg"},
         {id: 5, name: "教皇", path: "8/8d/RWS_Tarot_05_Hierophant.jpg"},
-        {id: 6, name: "恋人", path: "3/3a/TheLovers.jpg"},
+        {id: 6, name: "恋人", local: "lovers.jpg"},
         {id: 7, name: "战车", path: "9/9b/RWS_Tarot_07_Chariot.jpg"},
         {id: 8, name: "力量", path: "f/f5/RWS_Tarot_08_Strength.jpg"},
         {id: 9, name: "隐士", path: "4/4d/RWS_Tarot_09_Hermit.jpg"},
@@ -177,7 +177,7 @@
         {id: 24, name: "权杖三", path: "f/ff/Wands03.jpg"}, {id: 25, name: "权杖四", path: "a/a4/Wands04.jpg"},
         {id: 26, name: "权杖五", path: "9/9d/Wands05.jpg"}, {id: 27, name: "权杖六", path: "3/3b/Wands06.jpg"},
         {id: 28, name: "权杖七", path: "e/e4/Wands07.jpg"}, {id: 29, name: "权杖八", path: "6/6b/Wands08.jpg"},
-        {id: 30, name: "权杖九", path: "e/e3/Wands09.jpg"}, {id: 31, name: "权杖十", path: "0/0b/Wands10.jpg"},
+        {id: 30, name: "权杖九", local: "w_9.jpg"}, {id: 31, name: "权杖十", path: "0/0b/Wands10.jpg"},
         {id: 32, name: "权杖侍从", local: "w_page.jpg"},   {id: 33, name: "权杖骑士", local: "w_knight.jpg"},
         {id: 34, name: "权杖王后", local: "w_queen.jpg"},  {id: 35, name: "权杖国王", local: "w_king.jpg"},
 
@@ -191,8 +191,8 @@
         {id: 48, name: "圣杯王后", local: "c_queen.jpg"},  {id: 49, name: "圣杯国王", local: "c_king.jpg"},
 
         // --- 宝剑 ---
-        {id: 50, name: "宝剑一", path: "1/1a/Swords01.jpg"}, {id: 51, name: "宝剑二", path: "9/92/Swords02.jpg"},
-        {id: 52, name: "宝剑三", path: "2/2c/Swords03.jpg"}, {id: 53, name: "宝剑四", path: "b/bf/Swords04.jpg"},
+        {id: 50, name: "宝剑一", path: "1/1a/Swords01.jpg"}, {id: 51, name: "宝剑二", local: "s_2.jpg"},
+        {id: 52, name: "宝剑三", local: "s_3.jpg"}, {id: 53, name: "宝剑四", path: "b/bf/Swords04.jpg"},
         {id: 54, name: "宝剑五", path: "2/23/Swords05.jpg"}, {id: 55, name: "宝剑六", path: "2/29/Swords06.jpg"},
         {id: 56, name: "宝剑七", path: "3/34/Swords07.jpg"}, {id: 57, name: "宝剑八", path: "a/a7/Swords08.jpg"},
         {id: 58, name: "宝剑九", path: "2/2f/Swords09.jpg"}, {id: 59, name: "宝剑十", path: "d/d4/Swords10.jpg"},
@@ -210,7 +210,10 @@
     ];
 
     // === 获取图片地址的逻辑 ===
-    function getCardSrc(cardData) {
+    function getCardSrc(cardData) { 
+    // 只要有 local 属性，就去根目录找，否则才去维基百科找
+    return card.local ? getCourtCardUrl(card.local) : getFastImgUrl(card.path); 
+}
         if (cardData.local) {
             // 如果是宫廷牌，使用本地路径
             return getCourtCardUrl(cardData.local);
