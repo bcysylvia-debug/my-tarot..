@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>塔罗工坊 - 修复版</title>
+    <title>塔罗工坊 - 自定义图源版</title>
     <style>
         :root {
             --primary-color: #e0c097;
             --bg-gradient: radial-gradient(circle at center, #1a002a 0%, #050008 100%);
-            --card-back-color: #3a1c4a;
             --card-back-pattern: repeating-linear-gradient(45deg, #4a2c5a, #4a2c5a 2px, #2a0c3a 2px, #2a0c3a 4px);
         }
 
@@ -17,16 +16,18 @@
             color: var(--primary-color);
             font-family: 'STKaiti', 'Georgia', serif;
             display: flex; flex-direction: column; align-items: center;
-            min-height: 100vh; margin: 0; padding: 5px; overflow-x: hidden;
+            min-height: 100vh; margin: 0; padding: 5px; 
+            padding-bottom: 160px; /* 给底部栏留位置 */
+            overflow-x: hidden;
         }
 
         h1 { font-size: 1.1rem; margin: 8px 0; text-shadow: 0 0 8px rgba(224, 192, 151, 0.5); }
 
-        /* 通用按钮样式 */
-        .nav-group { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; justify-content: center; }
+        /* 按钮组 */
+        .nav-group { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; justify-content: center; }
         .nav-btn {
             background: rgba(90, 56, 117, 0.3); border: 1px solid var(--primary-color);
-            color: var(--primary-color); padding: 5px 10px; border-radius: 4px;
+            color: var(--primary-color); padding: 5px 12px; border-radius: 4px;
             cursor: pointer; font-size: 12px; transition: 0.2s;
         }
         .nav-btn.active { background: var(--primary-color); color: #1a002a; font-weight: bold; }
@@ -39,39 +40,35 @@
 
         #status-bar { margin-bottom: 5px; color: #b893cc; font-size: 12px; height: 16px; text-align: center;}
 
-        /* === 自由模式：结果展示栏 (新功能) === */
+        /* === 自由模式：底部结果栏 === */
         #free-result-bar {
-            display: none; /* 默认隐藏，自由模式开启 */
-            flex-wrap: nowrap; overflow-x: auto; 
-            gap: 8px; width: 95%; min-height: 140px;
-            background: rgba(0,0,0,0.3); border: 1px solid #5a3875;
-            padding: 10px; border-radius: 8px; margin-bottom: 10px;
-            align-items: center;
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            height: 140px; background: rgba(10, 0, 15, 0.95);
+            border-top: 1px solid #5a3875;
+            z-index: 100;
+            display: none; /* 默认隐藏 */
+            flex-direction: row; align-items: center;
+            overflow-x: auto; padding: 0 10px; gap: 10px;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
         }
-        /* 隐藏滚动条但保留功能 */
-        #free-result-bar::-webkit-scrollbar { height: 4px; }
-        #free-result-bar::-webkit-scrollbar-thumb { background: #5a3875; }
-
         .free-card-show {
-            flex: 0 0 auto; width: 80px; display: flex; flex-direction: column; align-items: center;
+            flex: 0 0 auto; width: 70px; display: flex; flex-direction: column; align-items: center;
             animation: slideIn 0.3s ease-out;
         }
         .free-card-img {
-            width: 80px; height: 140px; border-radius: 4px; border: 1px solid var(--primary-color);
+            width: 70px; height: 115px; border-radius: 4px; border: 1px solid var(--primary-color);
             overflow: hidden; background: #000;
         }
         .free-card-img img { width: 100%; height: 100%; object-fit: cover; }
-        .free-card-name { font-size: 10px; margin-top: 4px; text-align: center; color: #fff; }
+        .free-card-name { font-size: 10px; margin-top: 4px; text-align: center; color: #fff; white-space: nowrap; }
 
-        /* === 牌桌网格 (极小化牌背) === */
+        /* === 牌桌网格 (极小牌背) === */
         #deck-grid {
             display: grid; 
-            grid-template-columns: repeat(13, 1fr); /* 一行13张，超紧凑 */
+            grid-template-columns: repeat(13, 1fr); /* 13列，指甲盖大小 */
             gap: 2px; width: 98vw; max-width: 600px;
             padding-bottom: 20px;
         }
-        
-        /* YesNo模式稍微大一点 */
         .grid-yesno { grid-template-columns: repeat(7, 1fr) !important; gap: 4px !important; }
 
         .card-slot {
@@ -81,14 +78,13 @@
             border: 1px solid #3a1c4a;
             transition: opacity 0.3s;
         }
-        
-        /* 选中后变暗/消失 */
+        /* 自由模式选中后变暗 */
         .card-slot.selected { opacity: 0.1; pointer-events: none; }
 
-        /* 逆位旋转修复 */
+        /* 逆位旋转 */
         img.reversed { transform: rotate(180deg); }
 
-        /* 圣三角结果区 */
+        /* 结果区 */
         .result-container { display: flex; justify-content: center; gap: 8px; width: 100%; flex-wrap: wrap;}
         .tri-card { width: 28vw; max-width: 100px; text-align: center; animation: fadeIn 0.5s forwards; }
         .tri-img { 
@@ -104,7 +100,6 @@
             padding: 15px; border-radius: 12px; text-align: center; width: 85%;
             margin-top: 10px; animation: fadeIn 0.5s;
         }
-        .yn-title { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -136,7 +131,7 @@
 
     <div id="free-result-bar">
         <div style="color:#666; font-size:12px; width:100%; text-align:center;">
-            (点选下方小牌背，或点击随机抽取，选中的牌会列在这里)
+            (点选小牌背，或点击随机抽取，牌会列在这里)
         </div>
     </div>
 
@@ -145,12 +140,16 @@
     <div id="deck-grid"></div>
 
 <script>
-    // 代理加速 (强制WebP + 压缩)
+    // 1. 网络图源加速函数 (用于非宫廷牌)
     const getFastImgUrl = (path) => `https://wsrv.nl/?url=https://upload.wikimedia.org/wikipedia/commons/${path}&w=160&output=webp&q=75`;
 
-    // === 完整数据修复 (宫廷牌路径已人工校对) ===
+    // 2. 本地/自定义图源路径 (用于宫廷牌)
+    // 假设你在仓库根目录建了 "court" 文件夹
+    const getCourtCardUrl = (filename) => `./court/${filename}`;
+
+    // === 数据定义 ===
     const tarotData = [
-        // 大阿卡纳 (0-21)
+        // --- 大阿卡纳 (保持网络源) ---
         {id: 0, name: "愚者", path: "9/90/RWS_Tarot_00_Fool.jpg"},
         {id: 1, name: "魔术师", path: "d/de/RWS_Tarot_01_Magician.jpg"},
         {id: 2, name: "女教皇", path: "8/88/RWS_Tarot_02_High_Priestess.jpg"},
@@ -174,42 +173,53 @@
         {id: 20, name: "审判", path: "d/dd/RWS_Tarot_20_Judgement.jpg"},
         {id: 21, name: "世界", path: "f/ff/RWS_Tarot_21_World.jpg"},
 
-        // 权杖 (Wands)
+        // --- 权杖 (1-10网络，宫廷本地) ---
         {id: 22, name: "权杖一", path: "1/11/Wands01.jpg"}, {id: 23, name: "权杖二", path: "0/0f/Wands02.jpg"},
         {id: 24, name: "权杖三", path: "f/ff/Wands03.jpg"}, {id: 25, name: "权杖四", path: "a/a4/Wands04.jpg"},
         {id: 26, name: "权杖五", path: "9/9d/Wands05.jpg"}, {id: 27, name: "权杖六", path: "3/3b/Wands06.jpg"},
         {id: 28, name: "权杖七", path: "e/e4/Wands07.jpg"}, {id: 29, name: "权杖八", path: "6/6b/Wands08.jpg"},
         {id: 30, name: "权杖九", path: "e/e3/Wands09.jpg"}, {id: 31, name: "权杖十", path: "0/0b/Wands10.jpg"},
-        {id: 32, name: "权杖侍从", path: "6/6a/WandsPage.jpg"}, {id: 33, name: "权杖骑士", path: "1/16/WandsKnight.jpg"},
-        {id: 34, name: "权杖王后", path: "0/0d/WandsQueen.jpg"}, {id: 35, name: "权杖国王", path: "c/ce/WandsKing.jpg"},
+        {id: 32, name: "权杖侍从", local: "w_page.jpg"},   {id: 33, name: "权杖骑士", local: "w_knight.jpg"},
+        {id: 34, name: "权杖王后", local: "w_queen.jpg"},  {id: 35, name: "权杖国王", local: "w_king.jpg"},
 
-        // 圣杯 (Cups)
+        // --- 圣杯 ---
         {id: 36, name: "圣杯一", path: "3/36/Cups01.jpg"}, {id: 37, name: "圣杯二", path: "f/f8/Cups02.jpg"},
         {id: 38, name: "圣杯三", path: "7/7a/Cups03.jpg"}, {id: 39, name: "圣杯四", path: "3/35/Cups04.jpg"},
         {id: 40, name: "圣杯五", path: "d/d7/Cups05.jpg"}, {id: 41, name: "圣杯六", path: "1/17/Cups06.jpg"},
         {id: 42, name: "圣杯七", path: "a/ae/Cups07.jpg"}, {id: 43, name: "圣杯八", path: "6/60/Cups08.jpg"},
         {id: 44, name: "圣杯九", path: "2/24/Cups09.jpg"}, {id: 45, name: "圣杯十", path: "8/84/Cups10.jpg"},
-        {id: 46, name: "圣杯侍从", path: "a/a6/CupsPage.jpg"}, {id: 47, name: "圣杯骑士", path: "f/fa/CupsKnight.jpg"},
-        {id: 48, name: "圣杯王后", path: "6/61/CupsQueen.jpg"}, {id: 49, name: "圣杯国王", path: "f/f0/CupsKing.jpg"},
+        {id: 46, name: "圣杯侍从", local: "c_page.jpg"},   {id: 47, name: "圣杯骑士", local: "c_knight.jpg"},
+        {id: 48, name: "圣杯王后", local: "c_queen.jpg"},  {id: 49, name: "圣杯国王", local: "c_king.jpg"},
 
-        // 宝剑 (Swords)
+        // --- 宝剑 ---
         {id: 50, name: "宝剑一", path: "1/1a/Swords01.jpg"}, {id: 51, name: "宝剑二", path: "9/92/Swords02.jpg"},
         {id: 52, name: "宝剑三", path: "2/2c/Swords03.jpg"}, {id: 53, name: "宝剑四", path: "b/bf/Swords04.jpg"},
         {id: 54, name: "宝剑五", path: "2/23/Swords05.jpg"}, {id: 55, name: "宝剑六", path: "2/29/Swords06.jpg"},
         {id: 56, name: "宝剑七", path: "3/34/Swords07.jpg"}, {id: 57, name: "宝剑八", path: "a/a7/Swords08.jpg"},
         {id: 58, name: "宝剑九", path: "2/2f/Swords09.jpg"}, {id: 59, name: "宝剑十", path: "d/d4/Swords10.jpg"},
-        {id: 60, name: "宝剑侍从", path: "4/4c/SwordsPage.jpg"}, {id: 61, name: "宝剑骑士", path: "b/b0/SwordsKnight.jpg"},
-        {id: 62, name: "宝剑王后", path: "d/d4/SwordsQueen.jpg"}, {id: 63, name: "宝剑国王", path: "3/33/SwordsKing.jpg"},
+        {id: 60, name: "宝剑侍从", local: "s_page.jpg"},   {id: 61, name: "宝剑骑士", local: "s_knight.jpg"},
+        {id: 62, name: "宝剑王后", local: "s_queen.jpg"},  {id: 63, name: "宝剑国王", local: "s_king.jpg"},
 
-        // 星币 (Pentacles)
+        // --- 星币 ---
         {id: 64, name: "星币一", path: "f/fd/Pents01.jpg"}, {id: 65, name: "星币二", path: "9/9f/Pents02.jpg"},
         {id: 66, name: "星币三", path: "4/42/Pents03.jpg"}, {id: 67, name: "星币四", path: "3/35/Pents04.jpg"},
         {id: 68, name: "星币五", path: "9/96/Pents05.jpg"}, {id: 69, name: "星币六", path: "a/a6/Pents06.jpg"},
         {id: 70, name: "星币七", path: "6/6a/Pents07.jpg"}, {id: 71, name: "星币八", path: "4/49/Pents08.jpg"},
         {id: 72, name: "星币九", path: "f/f0/Pents09.jpg"}, {id: 73, name: "星币十", path: "4/42/Pents10.jpg"},
-        {id: 74, name: "星币侍从", path: "e/e0/PentsPage.jpg"}, {id: 75, name: "星币骑士", path: "c/c6/PentsKnight.jpg"},
-        {id: 76, name: "星币王后", path: "8/88/PentsQueen.jpg"}, {id: 77, name: "星币国王", path: "1/14/PentsKing.jpg"}
+        {id: 74, name: "星币侍从", local: "p_page.jpg"},   {id: 75, name: "星币骑士", local: "p_knight.jpg"},
+        {id: 76, name: "星币王后", local: "p_queen.jpg"},  {id: 77, name: "星币国王", local: "p_king.jpg"}
     ];
+
+    // === 获取图片地址的逻辑 ===
+    function getCardSrc(cardData) {
+        if (cardData.local) {
+            // 如果是宫廷牌，使用本地路径
+            return getCourtCardUrl(cardData.local);
+        } else {
+            // 否则使用网络加速路径
+            return getFastImgUrl(cardData.path);
+        }
+    }
 
     const ynRules = {
         22: 'WAIT', 36: 'WAIT', 50: 'WAIT', 64: 'WAIT',
@@ -221,7 +231,7 @@
     let currentTab = 'triangle';
     let triangleMode = 'random';
     let shuffledIndices = [];
-    let freeSelectedCount = 0; // 自由模式计数器
+    let freeSelectedCount = 0;
 
     function switchTab(tab) {
         currentTab = tab;
@@ -235,26 +245,27 @@
         document.getElementById('ctrl-triangle').style.display = 'none';
         document.getElementById('ctrl-free').style.display = 'none';
         document.getElementById('free-result-bar').style.display = 'none';
+        document.body.style.paddingBottom = '20px';
 
         if(tab === 'triangle') {
             document.getElementById('ctrl-triangle').style.display = 'flex';
             setTriangleMode('random');
         } else if(tab === 'free') {
             document.getElementById('ctrl-free').style.display = 'flex';
+            document.body.style.paddingBottom = '160px'; // 留出底部空间
             initFree();
         } else if(tab === 'yesno') {
             initYesNo();
         }
     }
 
-    // === 自由模式逻辑 ===
+    // === 自由模式 ===
     function initFree() {
         document.getElementById('status-bar').innerText = '自由模式：可点牌抽选，或点按钮随机抽';
         document.getElementById('free-result-bar').style.display = 'flex';
         document.getElementById('free-result-bar').innerHTML = '<div style="color:#aaa; font-size:12px; width:100%; text-align:center;">(选中的牌将按顺序出现在这里)</div>';
         freeSelectedCount = 0;
         
-        // 生成78张极小牌背
         shuffledIndices = shuffle(Array.from({length: 78}, (_, i) => i));
         const grid = document.getElementById('deck-grid');
         grid.innerHTML = '';
@@ -262,6 +273,7 @@
         for(let i=0; i<78; i++) {
             const slot = document.createElement('div');
             slot.className = 'card-slot';
+            // 自由模式，点击牌背直接选
             slot.onclick = () => pickFreeCard(i, slot);
             grid.appendChild(slot);
         }
@@ -271,29 +283,24 @@
         if(confirm("确定要清空当前牌阵吗？")) initFree();
     }
 
-    // 自由模式：点牌背抽选
     function pickFreeCard(idx, slot) {
         if(slot.classList.contains('selected')) return;
         slot.classList.add('selected'); // 牌背变暗消失
         addCardToFreeResult(shuffledIndices[idx]);
     }
 
-    // 自由模式：随机按钮抽选
     function drawRandomFree() {
-        // 找一张还没被选过的牌
         const availableSlots = Array.from(document.querySelectorAll('.card-slot:not(.selected)'));
         if(availableSlots.length === 0) {
             alert("牌都抽完啦！");
             return;
         }
         const randomSlot = availableSlots[Math.floor(Math.random() * availableSlots.length)];
-        randomSlot.click(); // 触发点击逻辑
+        randomSlot.click(); 
     }
 
-    // 添加牌到上方展示栏
     function addCardToFreeResult(cardId) {
         const bar = document.getElementById('free-result-bar');
-        // 如果是第一次选，清空提示语
         if(freeSelectedCount === 0) bar.innerHTML = '';
         freeSelectedCount++;
 
@@ -302,16 +309,13 @@
 
         const cardDiv = document.createElement('div');
         cardDiv.className = 'free-card-show';
-        // 使用 css class "reversed" 来控制图片旋转
         cardDiv.innerHTML = `
             <div class="free-card-img">
-                <img src="${getFastImgUrl(data.path)}" class="${isRev ? 'reversed' : ''}">
+                <img src="${getCardSrc(data)}" class="${isRev ? 'reversed' : ''}">
             </div>
             <div class="free-card-name">${freeSelectedCount}. ${data.name}${isRev?'(逆)':''}</div>
         `;
         bar.appendChild(cardDiv);
-        
-        // 自动滚动到最右边
         bar.scrollLeft = bar.scrollWidth;
     }
 
@@ -334,14 +338,14 @@
     }
 
     function renderYesNoResult(id) {
-        document.getElementById('deck-grid').innerHTML = ''; // 清空选牌区
+        document.getElementById('deck-grid').innerHTML = '';
         const data = tarotData.find(d => d.id === id);
         const type = ynRules[id] || 'OPEN';
         const color = {'YES':'#4caf50','NO':'#f44336','WAIT':'#ff9800','OPEN':'#9c27b0'}[type];
         
         document.getElementById('results').innerHTML = `
             <div class="tri-card" style="width:120px">
-                <div class="tri-img"><img src="${getFastImgUrl(data.path)}"></div>
+                <div class="tri-img"><img src="${getCardSrc(data)}"></div>
                 <div class="tri-label" style="margin-top:5px">${data.name}</div>
             </div>
             <div class="yn-box" style="border-color:${color}">
@@ -351,7 +355,7 @@
             </div>`;
     }
 
-    // === 圣三角逻辑 ===
+    // === 圣三角 ===
     let triPicks = [];
     function setTriangleMode(mode) {
         triangleMode = mode;
@@ -407,7 +411,7 @@
             <div class="tri-card">
                 <div class="tri-label">${labs[i]}</div>
                 <div class="tri-img">
-                    <img src="${getFastImgUrl(d.path)}" class="${isRev?'reversed':''}">
+                    <img src="${getCardSrc(d)}" class="${isRev?'reversed':''}">
                 </div>
                 <div class="tri-label" style="font-size:10px; margin-top:4px;">${d.name}${isRev?'(逆)':''}</div>
             </div>`;
@@ -415,7 +419,6 @@
         document.getElementById('status-bar').innerText = '解读完成';
     }
 
-    // 辅助函数
     function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
 
     window.onload = () => switchTab('triangle');
